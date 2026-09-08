@@ -27,7 +27,8 @@ export async function createExpenseAction(values: ExpenseFormValues) {
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
   revalidatePath('/reports')
-  redirect('/expenses')
+  const targetMonth = `${values.expense_date.slice(0, 7)}-01`
+  redirect(`/expenses?month=${targetMonth}`)
 }
 
 export async function updateExpenseAction(id: string, values: ExpenseFormValues) {
@@ -52,7 +53,8 @@ export async function updateExpenseAction(id: string, values: ExpenseFormValues)
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
   revalidatePath('/reports')
-  redirect('/expenses')
+  const targetMonth = `${values.expense_date.slice(0, 7)}-01`
+  redirect(`/expenses?month=${targetMonth}`)
 }
 
 export async function deleteExpenseAction(id: string) {
@@ -63,6 +65,7 @@ export async function deleteExpenseAction(id: string) {
 
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
+  revalidatePath('/reports')
   return { success: true }
 }
 
@@ -127,7 +130,9 @@ export async function createGrocerySessionAction(values: GrocerySessionFormValue
   revalidatePath('/grocery')
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
-  redirect('/grocery')
+  revalidatePath('/reports')
+  const targetMonth = `${values.session_date.slice(0, 7)}-01`
+  redirect(`/grocery?month=${targetMonth}`)
 }
 
 // ── Generator ─────────────────────────────────────────────────────
@@ -189,5 +194,7 @@ export async function createGeneratorExpenseAction(values: GeneratorExpenseFormV
   revalidatePath('/generator')
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
-  redirect('/generator')
+  revalidatePath('/reports')
+  const targetMonth = `${values.expense_date.slice(0, 7)}-01`
+  redirect(`/generator?month=${targetMonth}`)
 }

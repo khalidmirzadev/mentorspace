@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatDate, formatCurrency, formatMonth, currentBillingMonth, GENERATOR_TYPE_LABELS } from '@/lib/utils/formatters'
+import { formatDate, formatCurrency, formatMonth, currentBillingMonth, getMonthDateRange, GENERATOR_TYPE_LABELS } from '@/lib/utils/formatters'
 import { Plus, Zap } from 'lucide-react'
 import MonthSwitcher from '@/components/dashboard/MonthSwitcher'
 
@@ -26,9 +26,7 @@ export default async function GeneratorPage({
   const supabase = await createClient()
   const params = await searchParams
   const billingMonth = params.month ?? currentBillingMonth()
-  const [year, mon] = billingMonth.split('-').map(Number)
-  const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`
-  const monthEnd   = new Date(year, mon, 0).toISOString().split('T')[0]
+  const { start: monthStart, end: monthEnd } = getMonthDateRange(billingMonth)
 
   const { data: entries } = await supabase
     .from('generator_expenses')

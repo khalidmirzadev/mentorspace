@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { formatDate, formatCurrency, formatMonth, currentBillingMonth, getLastNMonths, PAYMENT_STATUS_LABELS } from '@/lib/utils/formatters'
+import { formatDate, formatCurrency, formatMonth, currentBillingMonth, getLastNMonths, getMonthDateRange, PAYMENT_STATUS_LABELS } from '@/lib/utils/formatters'
 import MonthSwitcher from '@/components/dashboard/MonthSwitcher'
 import { FileBarChart } from 'lucide-react'
 
@@ -25,17 +25,12 @@ export default async function ReportsPage({
   const params = await searchParams
   const billingMonth = params.month ?? currentBillingMonth()
   const report = params.report ?? 'pl'
-  const [year, mon] = billingMonth.split('-').map(Number)
-  const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`
-  const monthEnd   = new Date(year, mon, 0).toISOString().split('T')[0]
   const symbol = 'Rs.'
 
   // Fetch P&L data for last 12 months
   const plMonths = getLastNMonths(12).reverse()
   const plRows = await Promise.all(plMonths.map(async bm => {
-    const [yr, mo] = bm.split('-').map(Number)
-    const mStart = `${yr}-${String(mo).padStart(2, '0')}-01`
-    const mEnd   = new Date(yr, mo, 0).toISOString().split('T')[0]
+    const { start: mStart, end: mEnd } = getMonthDateRange(bm)
     const [{ data: pays }, { data: exps }] = await Promise.all([
       supabase.from('member_payments').select('amount_due, amount_paid').eq('billing_month', bm),
       supabase.from('expenses').select('amount').gte('expense_date', mStart).lte('expense_date', mEnd),

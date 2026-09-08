@@ -183,5 +183,6 @@ export async function paySalaryAction(
   revalidatePath('/staff')
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
+  revalidatePath('/reports')
   return { success: true }
 }

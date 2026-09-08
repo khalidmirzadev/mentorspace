@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
-import { formatMonth, toBillingMonth } from '@/lib/utils/formatters'
+import { formatMonth, toBillingMonth, shiftMonth, currentBillingMonth } from '@/lib/utils/formatters'
 
 interface MonthSwitcherProps {
   selectedMonth: string // '2025-01-01'
@@ -21,15 +21,10 @@ export default function MonthSwitcher({ selectedMonth }: MonthSwitcherProps) {
   }
 
   function changeMonth(delta: number) {
-    const d = new Date(selectedMonth)
-    d.setMonth(d.getMonth() + delta)
-    navigate(toBillingMonth(d.getFullYear(), d.getMonth() + 1))
+    navigate(shiftMonth(selectedMonth, delta))
   }
 
-  const isCurrentMonth = selectedMonth === toBillingMonth(
-    new Date().getFullYear(),
-    new Date().getMonth() + 1
-  )
+  const isCurrentMonth = selectedMonth === currentBillingMonth()
 
   return (
     <div className="flex items-center gap-1 bg-muted rounded-lg p-1">

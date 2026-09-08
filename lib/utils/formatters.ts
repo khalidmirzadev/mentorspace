@@ -48,6 +48,44 @@ export function currentBillingMonth(): string {
   return toBillingMonth(now.getFullYear(), now.getMonth() + 1)
 }
 
+/**
+ * Safely returns { start: 'YYYY-MM-01', end: 'YYYY-MM-DD' } for any billing month string.
+ * Completely timezone-independent without UTC offset truncation.
+ */
+export function getMonthDateRange(billingMonth: string): { start: string; end: string } {
+  const [yearStr, monStr] = billingMonth.split('-')
+  const year = parseInt(yearStr, 10)
+  const month = parseInt(monStr, 10) // 1-12
+
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const mm = String(month).padStart(2, '0')
+
+  return {
+    start: `${year}-${mm}-01`,
+    end: `${year}-${mm}-${String(daysInMonth).padStart(2, '0')}`,
+  }
+}
+
+/**
+ * Shifts a billing month string by delta months safely without timezone shifts.
+ */
+export function shiftMonth(billingMonth: string, delta: number): string {
+  const [yearStr, monStr] = billingMonth.split('-')
+  let year = parseInt(yearStr, 10)
+  let month = parseInt(monStr, 10) + delta
+
+  while (month > 12) {
+    month -= 12
+    year += 1
+  }
+  while (month < 1) {
+    month += 12
+    year -= 1
+  }
+
+  return toBillingMonth(year, month)
+}
+
 /** Check if today is within the payment alert window (e.g. 1st–5th) */
 export function isPaymentAlertPeriod(settings: Pick<AppSettings, 'payment_due_day_start' | 'payment_due_day_end'>): boolean {
   const today = new Date().getDate()
@@ -59,10 +97,9 @@ export function isPaymentAlertPeriod(settings: Pick<AppSettings, 'payment_due_da
 /** Returns an array of last N months as billing month strings, newest first */
 export function getLastNMonths(n: number): string[] {
   const months: string[] = []
-  const now = new Date()
+  const current = currentBillingMonth()
   for (let i = 0; i < n; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push(toBillingMonth(d.getFullYear(), d.getMonth() + 1))
+    months.push(shiftMonth(current, -i))
   }
   return months
 }

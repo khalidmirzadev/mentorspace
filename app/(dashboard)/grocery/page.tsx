@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatDate, formatCurrency, formatMonth, currentBillingMonth } from '@/lib/utils/formatters'
+import { formatDate, formatCurrency, formatMonth, currentBillingMonth, getMonthDateRange } from '@/lib/utils/formatters'
 import { Plus, ShoppingCart, ChevronRight } from 'lucide-react'
 import MonthSwitcher from '@/components/dashboard/MonthSwitcher'
 
@@ -18,9 +18,7 @@ export default async function GroceryPage({
   const supabase = await createClient()
   const params = await searchParams
   const billingMonth = params.month ?? currentBillingMonth()
-  const [year, mon] = billingMonth.split('-').map(Number)
-  const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`
-  const monthEnd   = new Date(year, mon, 0).toISOString().split('T')[0]
+  const { start: monthStart, end: monthEnd } = getMonthDateRange(billingMonth)
 
   const { data: sessions } = await supabase
     .from('grocery_sessions')

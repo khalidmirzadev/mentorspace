@@ -29,6 +29,7 @@ export async function recordPaymentAction(
 
   revalidatePath('/payments')
   revalidatePath('/dashboard')
+  revalidatePath('/reports')
   return { success: true }
 }
 

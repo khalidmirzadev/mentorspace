@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { DashboardKPIs, MonthlyPLData, ExpenseBreakdownItem } from '@/types'
-import { getLastNMonths, formatMonthShort } from '@/lib/utils/formatters'
+import { getLastNMonths, formatMonthShort, getMonthDateRange } from '@/lib/utils/formatters'
 
 /**
  * Fetch all KPIs for the dashboard for a given billing month.
@@ -10,9 +10,7 @@ export async function getDashboardKPIs(billingMonth: string): Promise<DashboardK
   const supabase = await createClient()
 
   // Parse month range for expense date filtering
-  const [year, mon] = billingMonth.split('-').map(Number)
-  const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`
-  const monthEnd   = new Date(year, mon, 0).toISOString().split('T')[0]
+  const { start: monthStart, end: monthEnd } = getMonthDateRange(billingMonth)
 
   const [
     { data: rooms },
@@ -112,9 +110,7 @@ export async function getMonthlyPLData(months = 6): Promise<MonthlyPLData[]> {
   const results: MonthlyPLData[] = []
 
   for (const bm of billingMonths) {
-    const [year, mon] = bm.split('-').map(Number)
-    const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`
-    const monthEnd   = new Date(year, mon, 0).toISOString().split('T')[0]
+    const { start: monthStart, end: monthEnd } = getMonthDateRange(bm)
 
     const [{ data: payments }, { data: expenses }] = await Promise.all([
       supabase.from('member_payments').select('amount_due, amount_paid').eq('billing_month', bm),
@@ -141,9 +137,7 @@ export async function getMonthlyPLData(months = 6): Promise<MonthlyPLData[]> {
 /** Expense breakdown by category for a month — used for pie chart */
 export async function getExpenseBreakdown(billingMonth: string): Promise<ExpenseBreakdownItem[]> {
   const supabase = await createClient()
-  const [year, mon] = billingMonth.split('-').map(Number)
-  const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`
-  const monthEnd   = new Date(year, mon, 0).toISOString().split('T')[0]
+  const { start: monthStart, end: monthEnd } = getMonthDateRange(billingMonth)
 
   const { data } = await supabase
     .from('expenses')
