@@ -60,38 +60,21 @@ export async function getPaymentWithTransactions(paymentId: string) {
   }
 }
 
+export { getAvailableSeatsForPlan, getPhysicalSeatsMatrix } from '@/lib/queries/spaces'
+
 export async function getAvailableSeats(excludeMemberId?: string) {
-  const supabase = await createClient()
-  // Seats not currently assigned to an active member (or assigned to this member)
-  const { data: seats } = await supabase
-    .from('seats')
-    .select('id, seat_number, room:rooms(name), monthly_rate')
-    .eq('is_active', true)
-    .order('seat_number')
-
-  const { data: occupiedSeats } = await supabase
-    .from('members')
-    .select('assigned_seat_id')
-    .eq('status', 'active')
-    .not('assigned_seat_id', 'is', null)
-
-  const occupiedIds = new Set(
-    (occupiedSeats ?? [])
-      .map((m: any) => m.assigned_seat_id)
-      .filter((id: string) => id !== excludeMemberId)
-  )
-
-  return (seats ?? [])
-    .filter((s: any) => !occupiedIds.has(s.id))
-    .map((s: any) => ({
-      id: s.id,
-      seat_number: s.seat_number,
-      monthly_rate: s.monthly_rate,
-      room: (Array.isArray(s.room) ? s.room[0] : s.room) ?? null,
-    })) as {
-      id: string; seat_number: string; monthly_rate: number | null
-      room: { name: string } | null
-    }[]
+  const { getPhysicalSeatsMatrix } = await import('@/lib/queries/spaces')
+  const matrix = await getPhysicalSeatsMatrix()
+  
+  return matrix.map(s => ({
+    id: s.id,
+    seat_number: s.seat_number,
+    monthly_rate: s.monthly_rate,
+    room: null,
+    morning_available: s.morning_available,
+    evening_available: s.evening_available,
+    dedicated_available: s.dedicated_available,
+  }))
 }
 
 export async function getAvailableRooms(excludeMemberId?: string) {

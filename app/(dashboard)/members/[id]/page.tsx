@@ -48,15 +48,23 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const totalPending = payments.filter(p => ['pending','partially_paid','overdue'].includes(p.payment_status)).length
   const totalCollected = payments.reduce((s, p) => s + p.amount_paid, 0)
 
+  const planLabel = member.space_type === 'individual_seat'
+    ? member.plan_type === 'morning'
+      ? 'Morning Shift (9am–6pm)'
+      : member.plan_type === 'evening'
+      ? 'Evening Shift (6pm–3am)'
+      : 'Dedicated (24H)'
+    : 'Private Room'
+
   const assignment = member.space_type === 'individual_seat'
-    ? member.assigned_seat ? `Seat ${(member.assigned_seat as any).seat_number}` : 'Unassigned'
+    ? member.assigned_seat ? `${(member.assigned_seat as any).seat_number} · ${planLabel}` : 'Unassigned'
     : member.assigned_room ? (member.assigned_room as any).name : 'Unassigned'
 
   return (
     <div>
       <PageHeader
         title={member.full_name}
-        description={`${SPACE_TYPE_LABELS[member.space_type]} · Joined ${formatDate(member.joining_date)}`}
+        description={`${assignment} · Joined ${formatDate(member.joining_date)}`}
         backHref="/members"
         backLabel="Members"
         actions={

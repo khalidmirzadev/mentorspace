@@ -6,6 +6,7 @@
 
 export type MemberStatus = 'active' | 'left'
 export type SpaceType = 'individual_seat' | 'complete_room'
+export type SeatPlanType = 'morning' | 'evening' | 'dedicated'
 export type PaymentStatus = 'pending' | 'partially_paid' | 'paid' | 'overdue'
 export type PaymentMethod = 'cash' | 'bank_transfer' | 'cheque' | 'online'
 export type StaffStatus = 'active' | 'left'
@@ -45,6 +46,43 @@ export interface Seat {
   current_member?: Member | null
 }
 
+export interface SeatWithShifts {
+  id: string
+  seat_number: string
+  seat_index: number
+  room_id: string | null
+  description: string | null
+  monthly_rate: number | null
+  is_active: boolean
+  morning_member?: {
+    id: string
+    full_name: string
+    phone: string | null
+    joining_date: string
+    monthly_amount: number
+    payment_status?: string
+  } | null
+  evening_member?: {
+    id: string
+    full_name: string
+    phone: string | null
+    joining_date: string
+    monthly_amount: number
+    payment_status?: string
+  } | null
+  dedicated_member?: {
+    id: string
+    full_name: string
+    phone: string | null
+    joining_date: string
+    monthly_amount: number
+    payment_status?: string
+  } | null
+  morning_available: boolean
+  evening_available: boolean
+  dedicated_available: boolean
+}
+
 // ── Members ───────────────────────────────────────────────────────
 
 export interface Member {
@@ -56,6 +94,7 @@ export interface Member {
   leaving_date: string | null
   status: MemberStatus
   space_type: SpaceType
+  plan_type?: SeatPlanType | null
   assigned_seat_id: string | null
   assigned_room_id: string | null
   monthly_amount: number
@@ -252,12 +291,21 @@ export interface AppSettings {
 export interface DashboardKPIs {
   // Space occupancy
   total_rooms: number
-  total_seats: number
+  total_seats: number           // 19 physical seats
   occupied_rooms: number
   occupied_seats: number
   available_rooms: number
   available_seats: number
   occupancy_percentage: number
+
+  // Shift-based occupancy
+  morning_occupied: number
+  morning_available: number
+  evening_occupied: number
+  evening_available: number
+  dedicated_occupied: number
+  total_shift_slots: number     // 38 slots
+  available_shift_slots: number
 
   // Members
   total_active_members: number
@@ -309,6 +357,7 @@ export interface MemberFormValues {
   email: string
   joining_date: string
   space_type: SpaceType
+  plan_type: SeatPlanType
   assigned_seat_id: string
   assigned_room_id: string
   monthly_amount: number

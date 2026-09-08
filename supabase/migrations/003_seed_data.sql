@@ -28,3 +28,12 @@ INSERT INTO app_settings (key, value, label) VALUES
   ('space_name',             'MentorSpace', 'Space Name'),
   ('overdue_auto_mark',      'true',        'Auto-mark overdue after due date')
 ON CONFLICT (key) DO NOTHING;
+
+-- 19 Predefined Shared Space Physical Seats
+INSERT INTO seats (seat_number, description, is_active)
+SELECT 
+  'Seat ' || n, 
+  'Shared workspace physical desk #' || n, 
+  true
+FROM generate_series(1, 19) n
+ON CONFLICT (seat_number) DO NOTHING;

@@ -69,14 +69,24 @@ export async function getDashboardKPIs(billingMonth: string): Promise<DashboardK
   const electricityExp     = expenses.filter(e => e.category?.slug === 'electricity').reduce((s, e) => s + e.amount, 0)
   const generatorExp       = expenses.filter(e => ['generator_fuel','generator_maintenance'].includes(e.category?.slug ?? '')).reduce((s, e) => s + e.amount, 0)
 
+  const { getWorkspaceOccupancyStats } = await import('@/lib/queries/spaces')
+  const shiftStats = await getWorkspaceOccupancyStats()
+
   return {
     total_rooms:           totalRooms,
-    total_seats:           totalSeats,
+    total_seats:           shiftStats.total_shared_seats,
     occupied_rooms:        oRooms,
-    occupied_seats:        oSeats,
+    occupied_seats:        shiftStats.dedicated_occupied + shiftStats.morning_occupied + shiftStats.evening_occupied,
     available_rooms:       totalRooms - oRooms,
     available_seats:       totalSeats - oSeats,
     occupancy_percentage:  totalSpaces > 0 ? Math.round((occupiedSpaces / totalSpaces) * 100) : 0,
+    morning_occupied:      shiftStats.morning_occupied,
+    morning_available:     shiftStats.morning_available,
+    evening_occupied:      shiftStats.evening_occupied,
+    evening_available:     shiftStats.evening_available,
+    dedicated_occupied:    shiftStats.dedicated_occupied,
+    total_shift_slots:     shiftStats.total_shift_slots,
+    available_shift_slots: shiftStats.available_shift_slots,
     total_active_members:  activeMembers,
     expected_revenue:      expectedRevenue,
     collected_revenue:     collectedRevenue,

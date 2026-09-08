@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,21 +11,44 @@ import {
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { createMemberAction, updateMemberAction } from '@/lib/actions/members'
-import type { Member } from '@/types'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import type { Member, SeatPlanType } from '@/types'
+import { AlertCircle, Loader2, Sun, Moon, Zap } from 'lucide-react'
 
-interface Seat { id: string; seat_number: string; room: { name: string } | null; monthly_rate: number | null }
-interface Room { id: string; name: string; room_type: string; monthly_rate: number | null }
-
-interface MemberFormProps {
-  member?: Member & { assigned_seat?: { id: string; seat_number: string } | null; assigned_room?: { id: string; name: string } | null }
-  availableSeats: Seat[]
-  availableRooms: Room[]
+interface SeatOption {
+  id: string
+  seat_number: string
+  monthly_rate: number | null
+  morning_available?: boolean
+  evening_available?: boolean
+  dedicated_available?: boolean
 }
 
-export default function MemberForm({ member, availableSeats, availableRooms }: MemberFormProps) {
+interface RoomOption {
+  id: string
+  name: string
+  room_type: string
+  monthly_rate: number | null
+}
+
+interface MemberFormProps {
+  member?: Member & {
+    assigned_seat?: { id: string; seat_number: string } | null
+    assigned_room?: { id: string; name: string } | null
+  }
+  availableSeats: SeatOption[]
+  availableRooms: RoomOption[]
+  initialSeatId?: string
+  initialPlan?: SeatPlanType
+}
+
+export default function MemberForm({
+  member,
+  availableSeats,
+  availableRooms,
+  initialSeatId,
+  initialPlan,
+}: MemberFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -34,8 +57,25 @@ export default function MemberForm({ member, availableSeats, availableRooms }: M
   const [spaceType, setSpaceType] = useState<'individual_seat' | 'complete_room'>(
     member?.space_type ?? 'individual_seat'
   )
-  const [seatId, setSeatId]   = useState(member?.assigned_seat_id ?? '')
-  const [roomId, setRoomId]   = useState(member?.assigned_room_id ?? '')
+  const [planType, setPlanType] = useState<SeatPlanType>(
+    member?.plan_type ?? initialPlan ?? 'dedicated'
+  )
+  const [seatId, setSeatId] = useState(member?.assigned_seat_id ?? initialSeatId ?? '')
+  const [roomId, setRoomId] = useState(member?.assigned_room_id ?? '')
+
+  // Filter available seats based on the selected plan
+  const eligibleSeats = useMemo(() => {
+    return availableSeats.filter(s => {
+      // Always include currently assigned seat for this member
+      if (member?.assigned_seat_id === s.id) return true
+      if (initialSeatId === s.id) return true
+
+      if (planType === 'morning') return s.morning_available !== false
+      if (planType === 'evening') return s.evening_available !== false
+      if (planType === 'dedicated') return s.dedicated_available !== false
+      return true
+    })
+  }, [availableSeats, planType, member?.assigned_seat_id, initialSeatId])
 
   // Auto-fill monthly amount when seat/room is selected
   const selectedSeat = availableSeats.find(s => s.id === seatId)
@@ -52,6 +92,7 @@ export default function MemberForm({ member, availableSeats, availableRooms }: M
       email:            fd.get('email') as string,
       joining_date:     fd.get('joining_date') as string,
       space_type:       spaceType,
+      plan_type:        spaceType === 'individual_seat' ? planType : 'dedicated',
       assigned_seat_id: spaceType === 'individual_seat' ? seatId : '',
       assigned_room_id: spaceType === 'complete_room'   ? roomId : '',
       monthly_amount:   parseFloat(fd.get('monthly_amount') as string) || 0,
@@ -104,57 +145,109 @@ export default function MemberForm({ member, availableSeats, availableRooms }: M
         </CardContent>
       </Card>
 
-      {/* Space Assignment */}
+      {/* Workspace & Shift Assignment */}
       <Card>
         <CardContent className="p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Space Assignment</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Workspace & Shift Assignment</h2>
 
           <div className="space-y-1.5">
-            <Label>Space Type *</Label>
-            <Select value={spaceType} onValueChange={(v: any) => setSpaceType(v)}>
-              <SelectTrigger className="w-full sm:w-64">
+            <Label>Workspace Type *</Label>
+            <Select value={spaceType} onValueChange={(v) => v && setSpaceType(v as any)}>
+              <SelectTrigger className="w-full sm:w-72">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="individual_seat">Individual Seat</SelectItem>
-                <SelectItem value="complete_room">Complete Room</SelectItem>
+                <SelectItem value="individual_seat">Shared Space (Seat 1–19)</SelectItem>
+                <SelectItem value="complete_room">Private Room / Office</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          {/* If Individual Seat: Select Shift Plan */}
           {spaceType === 'individual_seat' && (
-            <div className="space-y-1.5">
-              <Label>Assign Seat</Label>
-              <Select value={seatId} onValueChange={(v) => setSeatId(v ?? '')}>
-                <SelectTrigger className="w-full sm:w-72">
-                  <SelectValue placeholder="Select a seat…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Include currently assigned seat even if not in "available" list */}
-                  {member?.assigned_seat && !availableSeats.find(s => s.id === member.assigned_seat_id) && (
-                    <SelectItem value={member.assigned_seat_id!}>
-                      {(member.assigned_seat as any).seat_number} (current)
-                    </SelectItem>
-                  )}
-                  {availableSeats.map(s => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.seat_number}{s.room ? ` — ${s.room.name}` : ''}
-                      {s.monthly_rate ? ` (Rs. ${s.monthly_rate})` : ''}
-                    </SelectItem>
-                  ))}
-                  {availableSeats.length === 0 && !member?.assigned_seat_id && (
-                    <SelectItem value="" disabled>No seats available</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+            <div className="space-y-3 pt-1">
+              <Label>Shift Plan *</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    id: 'morning',
+                    label: 'Morning Shift',
+                    time: '9:00 AM – 6:00 PM',
+                    icon: Sun,
+                    color: 'text-amber-500',
+                  },
+                  {
+                    id: 'evening',
+                    label: 'Evening Shift',
+                    time: '6:00 PM – 3:00 AM',
+                    icon: Moon,
+                    color: 'text-indigo-500',
+                  },
+                  {
+                    id: 'dedicated',
+                    label: 'Dedicated (24H)',
+                    time: 'Full-time access',
+                    icon: Zap,
+                    color: 'text-purple-500',
+                  },
+                ].map(plan => {
+                  const isSelected = planType === plan.id
+                  const Icon = plan.icon
+                  return (
+                    <button
+                      type="button"
+                      key={plan.id}
+                      onClick={() => setPlanType(plan.id as SeatPlanType)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-1 ring-indigo-600'
+                          : 'border-border bg-card hover:border-border/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className={`w-4 h-4 ${plan.color}`} />
+                        <span className="font-semibold text-xs">{plan.label}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">{plan.time}</p>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Assign Specific Physical Seat */}
+              <div className="space-y-1.5 pt-2">
+                <Label>Select Physical Desk (Seat 1–19) *</Label>
+                <Select value={seatId} onValueChange={(v) => setSeatId(v ?? '')}>
+                  <SelectTrigger className="w-full sm:w-80">
+                    <SelectValue placeholder="Choose an available seat…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eligibleSeats.map(s => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.seat_number}
+                        {s.monthly_rate ? ` — Rs. ${s.monthly_rate.toLocaleString()}/mo` : ''}
+                      </SelectItem>
+                    ))}
+                    {eligibleSeats.length === 0 && (
+                      <SelectItem value="" disabled>
+                        No seats available for {planType} shift
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Showing {eligibleSeats.length} physical desks available for the <span className="font-medium capitalize">{planType}</span> plan.
+                </p>
+              </div>
             </div>
           )}
 
+          {/* If Complete Room */}
           {spaceType === 'complete_room' && (
-            <div className="space-y-1.5">
-              <Label>Assign Room</Label>
+            <div className="space-y-1.5 pt-1">
+              <Label>Assign Private Room *</Label>
               <Select value={roomId} onValueChange={(v) => setRoomId(v ?? '')}>
-                <SelectTrigger className="w-full sm:w-72">
+                <SelectTrigger className="w-full sm:w-80">
                   <SelectValue placeholder="Select a room…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -166,11 +259,11 @@ export default function MemberForm({ member, availableSeats, availableRooms }: M
                   {availableRooms.map(r => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name} ({r.room_type})
-                      {r.monthly_rate ? ` — Rs. ${r.monthly_rate}` : ''}
+                      {r.monthly_rate ? ` — Rs. ${r.monthly_rate.toLocaleString()}/mo` : ''}
                     </SelectItem>
                   ))}
                   {availableRooms.length === 0 && !member?.assigned_room_id && (
-                    <SelectItem value="" disabled>No rooms available</SelectItem>
+                    <SelectItem value="" disabled>No private rooms available</SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -182,11 +275,11 @@ export default function MemberForm({ member, availableSeats, availableRooms }: M
       {/* Financials */}
       <Card>
         <CardContent className="p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Financials</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Financials & Billing</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="monthly_amount">Monthly Amount (Rs.) *</Label>
+              <Label htmlFor="monthly_amount">Monthly Fee (Rs.) *</Label>
               <Input
                 id="monthly_amount"
                 name="monthly_amount"
@@ -201,11 +294,6 @@ export default function MemberForm({ member, availableSeats, availableRooms }: M
                 }
                 placeholder="15000"
               />
-              {(spaceType === 'individual_seat' ? selectedSeat : selectedRoom)?.monthly_rate && (
-                <p className="text-xs text-muted-foreground">
-                  Listed rate: Rs. {(spaceType === 'individual_seat' ? selectedSeat : selectedRoom)?.monthly_rate}
-                </p>
-              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="security_deposit">Security Deposit (Rs.)</Label>
@@ -231,8 +319,8 @@ export default function MemberForm({ member, availableSeats, availableRooms }: M
             id="notes"
             name="notes"
             defaultValue={member?.notes ?? ''}
-            placeholder="Any additional notes…"
-            rows={3}
+            placeholder="Any additional requirements or notes…"
+            rows={2}
           />
         </CardContent>
       </Card>

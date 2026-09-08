@@ -78,18 +78,19 @@ export default function KpiCards({ kpis, billingMonth }: KpiCardsProps) {
           href="/members"
         />
         <KpiCard
-          title="Occupancy"
-          value={`${kpis.occupancy_percentage}%`}
-          sub={`${kpis.occupied_rooms + kpis.occupied_seats} occupied / ${kpis.total_rooms + kpis.total_seats} total`}
-          icon={<MapPin className="w-5 h-5" />}
-          highlight={kpis.occupancy_percentage >= 80 ? 'success' : kpis.occupancy_percentage >= 50 ? 'warning' : 'danger'}
+          title="19 Shared Desks"
+          value={`${kpis.dedicated_occupied + kpis.morning_occupied + kpis.evening_occupied} active`}
+          sub={`☀️ ${kpis.morning_occupied} morning · 🌙 ${kpis.evening_occupied} evening · ⚡ ${kpis.dedicated_occupied} dedicated`}
+          icon={<Building className="w-5 h-5" />}
+          highlight="primary"
           href="/spaces"
         />
         <KpiCard
-          title="Available Seats"
-          value={String(kpis.available_seats)}
-          sub={`${kpis.available_rooms} rooms available`}
-          icon={<Building className="w-5 h-5" />}
+          title="Shift Slots Capacity"
+          value={`${kpis.available_shift_slots ?? (38 - (kpis.occupied_seats || 0))} Available`}
+          sub={`out of ${kpis.total_shift_slots ?? 38} bookable shift slots`}
+          icon={<MapPin className="w-5 h-5" />}
+          highlight={(kpis.available_shift_slots ?? 0) > 10 ? 'success' : 'warning'}
           href="/spaces"
         />
         <KpiCard
