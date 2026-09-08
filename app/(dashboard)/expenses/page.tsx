@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate, formatCurrency, currentBillingMonth } from '@/lib/utils/formatters'
-import { Plus, ChevronRight } from 'lucide-react'
+import { Plus, ChevronRight, Edit } from 'lucide-react'
 import MonthSwitcher from '@/components/dashboard/MonthSwitcher'
 
 export const metadata: Metadata = { title: 'Expenses' }
@@ -75,11 +75,12 @@ export default async function ExpensesPage({
                   <TableHead>Vendor</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Method</TableHead>
+                  <TableHead className="w-16 text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(expenses ?? []).map((expense: any) => (
-                  <TableRow key={expense.id}>
+                  <TableRow key={expense.id} className="group">
                     <TableCell className="text-sm">{formatDate(expense.expense_date)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -92,6 +93,13 @@ export default async function ExpensesPage({
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(expense.amount, symbol)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs capitalize">{expense.payment_method ?? 'Cash'}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link href={`/expenses/${expense.id}/edit`}>
+                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground group-hover:text-indigo-600 hover:bg-indigo-50">
+                          <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+                        </Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}

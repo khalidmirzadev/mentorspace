@@ -11,24 +11,31 @@ import {
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
-import { createExpenseAction } from '@/lib/actions/expenses'
-import type { ExpenseCategory, PaymentMethod } from '@/types'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { createExpenseAction, updateExpenseAction } from '@/lib/actions/expenses'
+import type { ExpenseCategory, Expense, PaymentMethod } from '@/types'
+import { AlertCircle, Loader2, Save, Plus } from 'lucide-react'
 
 interface ExpenseFormProps {
   categories: ExpenseCategory[]
+  expense?: Expense
 }
 
-export default function ExpenseForm({ categories }: ExpenseFormProps) {
+export default function ExpenseForm({ categories, expense }: ExpenseFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   const todayStr = new Date().toISOString().split('T')[0]
   const [categoryId, setCategoryId] = useState<string>(
-    categories[0]?.id ? String(categories[0].id) : ''
+    expense?.category_id
+      ? String(expense.category_id)
+      : categories[0]?.id
+      ? String(categories[0].id)
+      : ''
   )
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>(
+    expense?.payment_method ?? 'cash'
+  )
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -55,8 +62,15 @@ export default function ExpenseForm({ categories }: ExpenseFormProps) {
       return
     }
 
+    if (!values.description.trim()) {
+      setError('Please provide an expense description.')
+      return
+    }
+
     startTransition(async () => {
-      const res = await createExpenseAction(values)
+      const res = expense
+        ? await updateExpenseAction(expense.id, values)
+        : await createExpenseAction(values)
       if (res?.error) setError(res.error)
     })
   }
@@ -72,7 +86,9 @@ export default function ExpenseForm({ categories }: ExpenseFormProps) {
 
       <Card>
         <CardContent className="p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Expense Details</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            {expense ? 'Edit Expense Details' : 'Expense Details'}
+          </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -101,7 +117,7 @@ export default function ExpenseForm({ categories }: ExpenseFormProps) {
                 name="expense_date"
                 type="date"
                 required
-                defaultValue={todayStr}
+                defaultValue={expense?.expense_date ?? todayStr}
               />
             </div>
 
@@ -114,6 +130,7 @@ export default function ExpenseForm({ categories }: ExpenseFormProps) {
                 min="1"
                 step="0.01"
                 required
+                defaultValue={expense?.amount ?? ''}
                 placeholder="5000"
               />
             </div>
@@ -140,26 +157,29 @@ export default function ExpenseForm({ categories }: ExpenseFormProps) {
               id="description"
               name="description"
               required
-              placeholder="e.g. Internet Bill for October, Office Supplies, Tea & Refreshments"
+              defaultValue={expense?.description ?? ''}
+              placeholder="e.g. Nayatel Internet Bill for October, Office Refreshments"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="vendor">Vendor / Paid To</Label>
+            <Label htmlFor="vendor">Vendor / Payee</Label>
             <Input
               id="vendor"
               name="vendor"
-              placeholder="e.g. Nayatel, Metro, Electricity Dept"
+              defaultValue={expense?.vendor ?? ''}
+              placeholder="e.g. Nayatel, Metro, Electricity Department"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">Notes / Receipt Reference</Label>
             <Textarea
               id="notes"
               name="notes"
               rows={3}
-              placeholder="Any additional information..."
+              defaultValue={expense?.notes ?? ''}
+              placeholder="Any invoice reference or additional receipt details..."
             />
           </div>
         </CardContent>
@@ -171,7 +191,13 @@ export default function ExpenseForm({ categories }: ExpenseFormProps) {
           disabled={isPending}
           className="bg-indigo-600 hover:bg-indigo-500"
         >
-          {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</> : 'Add Expense'}
+          {isPending ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</>
+          ) : expense ? (
+            <><Save className="w-4 h-4 mr-2" /> Save Changes</>
+          ) : (
+            <><Plus className="w-4 h-4 mr-2" /> Add Expense</>
+          )}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancel

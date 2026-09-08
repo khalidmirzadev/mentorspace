@@ -26,6 +26,32 @@ export async function createExpenseAction(values: ExpenseFormValues) {
 
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
+  revalidatePath('/reports')
+  redirect('/expenses')
+}
+
+export async function updateExpenseAction(id: string, values: ExpenseFormValues) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('expenses')
+    .update({
+      category_id:    values.category_id,
+      expense_date:   values.expense_date,
+      amount:         values.amount,
+      description:    values.description,
+      vendor:         values.vendor || null,
+      payment_method: values.payment_method || null,
+      notes:          values.notes || null,
+      updated_at:     new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/expenses')
+  revalidatePath('/dashboard')
+  revalidatePath('/reports')
   redirect('/expenses')
 }
 
